@@ -1,0 +1,16 @@
+{
+  "name": "fleet-dashboard",
+  "supportEmail": "YOUR_EMAIL@example.com",
+  "version": "1.0.0",
+  "items": [
+    {
+      "url": "https://YOUR_GITHUB_USERNAME.github.io/mygeotab-fleet-dashboard/index.html",
+      "path": "AddIns",
+      "menuName": {
+        "en": "Fleet Dashboard",
+        "ja": "運行管理"
+      },
+      "icon": "https://YOUR_GITHUB_USERNAME.github.io/mygeotab-fleet-dashboard/icon.svg"
+    }
+  ]
+}

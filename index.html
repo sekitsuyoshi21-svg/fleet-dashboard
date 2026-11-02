@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>運行管理ダッシュボード</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">F</div>
+        <div>
+          <p class="eyebrow">MYGEOTAB ADD-IN</p>
+          <h1>運行管理</h1>
+          <p class="subheading">今日のフリート状況と、優先して対応する車両</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="updated-at" aria-live="polite">
+          <span class="status-dot status-dot--online"></span>
+          <span>最終更新 <strong id="updatedAt">--:--</strong></span>
+        </div>
+        <button class="button button--primary" id="refreshButton" type="button">
+          <span class="refresh-icon" aria-hidden="true">↻</span>
+          データ更新
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="metrics" aria-label="今日の状況">
+        <article class="metric-card">
+          <div class="metric-icon metric-icon--blue" aria-hidden="true">▰</div>
+          <div><p>稼働車両</p><div class="metric-value"><strong id="activeCount">32</strong><span> / 36台</span></div><small>現在稼働中</small></div>
+        </article>
+        <article class="metric-card metric-card--critical">
+          <div class="metric-icon metric-icon--red" aria-hidden="true">!</div>
+          <div><p>要対応</p><div class="metric-value"><strong id="criticalCount">3</strong><span> 台</span></div><small>優先して確認</small></div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon metric-icon--amber" aria-hidden="true">△</div>
+          <div><p>要注意</p><div class="metric-value"><strong id="warningCount">5</strong><span> 台</span></div><small>経過観察</small></div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-icon metric-icon--violet" aria-hidden="true">✓</div>
+          <div><p>点検期限間近</p><div class="metric-value"><strong id="inspectionCount">5</strong><span> 台</span></div><small>7日以内</small></div>
+        </article>
+      </section>
+
+      <section class="priority-section">
+        <div class="section-heading">
+          <div><p class="eyebrow eyebrow--red">PRIORITY</p><h2>今日対応が必要です</h2></div>
+          <button class="text-button" id="showCriticalButton" type="button">すべての要対応車両を見る <span>→</span></button>
+        </div>
+        <div class="priority-grid" id="priorityGrid"></div>
+      </section>
+
+      <section class="fleet-panel">
+        <div class="fleet-header">
+          <div><p class="eyebrow">FLEET</p><h2>車両の状況</h2><p class="section-description">状態、運転者、故障内容を一覧で確認できます</p></div>
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" placeholder="車両・運転者・故障コードを検索" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="filter-row" role="group" aria-label="状態で絞り込み">
+          <button class="filter-chip is-active" data-filter="all" type="button">すべて <span id="allBadge">4</span></button>
+          <button class="filter-chip" data-filter="critical" type="button"><i class="dot dot--red"></i>要対応 <span id="criticalBadge">2</span></button>
+          <button class="filter-chip" data-filter="warning" type="button"><i class="dot dot--amber"></i>要注意 <span id="warningBadge">1</span></button>
+          <button class="filter-chip" data-filter="normal" type="button"><i class="dot dot--green"></i>正常 <span id="normalBadge">1</span></button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>車両</th><th>状態</th><th>運転者</th><th>内容</th><th>最終更新</th><th><span class="sr-only">操作</span></th></tr></thead>
+            <tbody id="vehicleTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState" hidden><strong>該当する車両がありません</strong><p>検索条件またはフィルターを変更してください。</p></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="vehicle-drawer" id="vehicleDrawer" aria-hidden="true" aria-labelledby="drawerTitle">
+    <div class="drawer-header">
+      <div><p class="eyebrow">VEHICLE DETAIL</p><h2 id="drawerTitle">車両詳細</h2></div>
+      <button class="icon-button" id="closeDrawerButton" type="button" aria-label="詳細を閉じる">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
