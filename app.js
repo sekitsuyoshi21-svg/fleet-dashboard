@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  // MyGeotab API instance supplied by the Custom Page Add-In lifecycle.
   let api = null;
   let vehicles = [];
   let activeFilter = "all";
@@ -45,9 +44,14 @@
     }[char]));
   }
 
-  function entityId(entity) {
-    if (!entity) return "";
-    return typeof entity === "string" ? entity : entity.id || "";
+  function referenceId(value) {
+    if (!value) return "";
+    return typeof value === "string" ? value : value.id || "";
+  }
+
+  function referenceName(value) {
+    if (!value || typeof value === "string") return "";
+    return value.name || "";
   }
 
   function formatTime(value) {
@@ -75,24 +79,96 @@
     if (driver.name) return driver.name;
     const fullName = [driver.firstName, driver.lastName].filter(Boolean).join(" ");
     if (fullName) return fullName;
-    return entityId(driver) ? "割当あり" : "未割当";
+    return referenceId(driver) ? "割当あり" : "未割当";
+  }
+
+  function sourceText(diagnostic) {
+    const source = diagnostic?.source;
+    return [referenceId(source), referenceName(source)]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function controllerText(diagnostic) {
+    const controller = diagnostic?.controller;
+    return [referenceId(controller), referenceName(controller)]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function formatObdCode(diagnostic) {
+    if (!diagnostic || !sourceText(diagnostic).includes("obd")) return "";
+
+    const controller = controllerText(diagnostic);
+    let prefix = "";
+
+    if (controller.includes("powertrain")) prefix = "P";
+    else if (controller.includes("body")) prefix = "B";
+    else if (controller.includes("chassis")) prefix = "C";
+    else if (controller.includes("network")) prefix = "U";
+
+    const numericCode = Number(diagnostic.code);
+    if (!prefix || !Number.isFinite(numericCode)) return "";
+
+    return `${prefix}${numericCode.toString(16).toUpperCase().padStart(4, "0")}`;
+  }
+
+  function formatJ1939Code(diagnostic, failureMode) {
+    if (!diagnostic || !sourceText(diagnostic).includes("j1939")) return "";
+
+    const spn = Number.isFinite(Number(diagnostic.code))
+      ? `SPN ${diagnostic.code}`
+      : "";
+    const fmi = Number.isFinite(Number(failureMode?.code))
+      ? `FMI ${failureMode.code}`
+      : "";
+
+    return [spn, fmi].filter(Boolean).join(" / ");
   }
 
   function getFaultCode(fault) {
     if (!fault) return "";
-    const diagnostic = fault.diagnostic || {};
-    return diagnostic.code || diagnostic.name || fault.failureMode?.name || "";
+
+    const diagnostic = fault.resolvedDiagnostic || fault.diagnostic || null;
+    const failureMode = fault.resolvedFailureMode || fault.failureMode || null;
+
+    const obdCode = formatObdCode(diagnostic);
+    if (obdCode) return obdCode;
+
+    const j1939Code = formatJ1939Code(diagnostic, failureMode);
+    if (j1939Code) return j1939Code;
+
+    if (diagnostic?.code !== undefined && diagnostic?.code !== null) {
+      return `診断コード ${diagnostic.code}`;
+    }
+
+    const diagnosticId = referenceId(fault.diagnostic);
+    return diagnosticId ? `Diagnostic ID: ${diagnosticId}` : "";
   }
 
   function getFaultDescription(fault) {
     if (!fault) return "現在確認できる故障はありません";
-    return (
-      fault.faultDescription ||
-      fault.diagnostic?.name ||
-      fault.effectOnComponent ||
-      fault.failureMode?.name ||
-      "故障情報を検出しました"
-    );
+
+    const diagnostic = fault.resolvedDiagnostic || fault.diagnostic || null;
+    const failureMode = fault.resolvedFailureMode || fault.failureMode || null;
+    const diagnosticName = referenceName(diagnostic);
+    const failureModeName = referenceName(failureMode);
+
+    if (fault.faultDescription) return fault.faultDescription;
+    if (diagnosticName && failureModeName) {
+      return `${diagnosticName}（${failureModeName}）`;
+    }
+    if (diagnosticName) return diagnosticName;
+    if (fault.effectOnComponent) return fault.effectOnComponent;
+    if (failureModeName) return `故障モード：${failureModeName}`;
+    if (fault.recommendation) return fault.recommendation;
+
+    const diagnosticId = referenceId(fault.diagnostic);
+    return diagnosticId
+      ? `診断情報あり（${diagnosticId}）`
+      : "詳細不明の故障情報";
   }
 
   function severityText(fault) {
@@ -100,6 +176,67 @@
     if (!severity) return "";
     if (typeof severity === "string") return severity.toLowerCase();
     return String(severity.name || severity.id || "").toLowerCase();
+  }
+
+  async function enrichFaultDetails(faultData) {
+    const faults = faultData || [];
+
+    const diagnosticIds = [...new Set(
+      faults.map((fault) => referenceId(fault.diagnostic)).filter(Boolean)
+    )];
+
+    const failureModeIds = [...new Set(
+      faults
+        .map((fault) => referenceId(fault.failureMode))
+        .filter((id) => id && !id.includes("NoFailureModeId"))
+    )];
+
+    let diagnostics = [];
+    let failureModes = [];
+
+    if (diagnosticIds.length > 0) {
+      try {
+        diagnostics = await geotabCall("Get", {
+          typeName: "Diagnostic",
+          search: { ids: diagnosticIds }
+        });
+      } catch (error) {
+        console.warn("Diagnosticの取得に失敗しました。", error);
+      }
+    }
+
+    if (failureModeIds.length > 0) {
+      try {
+        failureModes = await geotabCall("Get", {
+          typeName: "FailureMode",
+          search: { ids: failureModeIds }
+        });
+      } catch (error) {
+        console.warn("FailureModeの取得に失敗しました。", error);
+      }
+    }
+
+    const diagnosticsById = new Map(
+      (diagnostics || []).map((diagnostic) => [diagnostic.id, diagnostic])
+    );
+    const failureModesById = new Map(
+      (failureModes || []).map((failureMode) => [failureMode.id, failureMode])
+    );
+
+    return faults.map((fault) => {
+      const diagnosticId = referenceId(fault.diagnostic);
+      const failureModeId = referenceId(fault.failureMode);
+
+      return {
+        ...fault,
+        resolvedDiagnostic:
+          diagnosticsById.get(diagnosticId) ||
+          (typeof fault.diagnostic === "object" ? fault.diagnostic : null),
+        resolvedFailureMode:
+          failureModesById.get(failureModeId) ||
+          (typeof fault.failureMode === "object" ? fault.failureMode : null)
+      };
+    });
   }
 
   function classifyVehicle(fault, statusInfo) {
@@ -136,7 +273,7 @@
     const latestFaultByDevice = new Map();
 
     for (const statusInfo of statusInfos || []) {
-      const deviceId = entityId(statusInfo.device);
+      const deviceId = referenceId(statusInfo.device);
       if (deviceId) statusByDevice.set(deviceId, statusInfo);
     }
 
@@ -145,7 +282,7 @@
     );
 
     for (const fault of sortedFaults) {
-      const deviceId = entityId(fault.device);
+      const deviceId = referenceId(fault.device);
       if (deviceId && !latestFaultByDevice.has(deviceId)) {
         latestFaultByDevice.set(deviceId, fault);
       }
@@ -218,7 +355,7 @@
           <div class="alert-badge">✓</div>
           <div class="priority-main">
             <h3>緊急対応が必要な車両はありません</h3>
-            <p>直近${FAULT_LOOKBACK_HOURS}時間の故障情報を確認済みです</p>
+            <p>直近${FAULT_LOOKBACK_HOURS}時間の故障情報を確認しています</p>
           </div>
         </div>`;
       return;
@@ -374,7 +511,9 @@
       }
 
       const now = new Date();
-      const faultFromDate = new Date(now.getTime() - FAULT_LOOKBACK_HOURS * 60 * 60 * 1000);
+      const faultFromDate = new Date(
+        now.getTime() - FAULT_LOOKBACK_HOURS * 60 * 60 * 1000
+      );
 
       const devices = await geotabCall("Get", {
         typeName: "Device",
@@ -391,7 +530,7 @@
         return;
       }
 
-      const [statusInfos, faultData] = await Promise.all([
+      const [statusInfos, rawFaultData] = await Promise.all([
         geotabCall("Get", {
           typeName: "DeviceStatusInfo",
           search: {}
@@ -406,7 +545,9 @@
         })
       ]);
 
+      const faultData = await enrichFaultDetails(rawFaultData);
       vehicles = buildVehicles(devices, statusInfos, faultData);
+
       render();
       if (els.updatedAt) els.updatedAt.textContent = formatTime(now);
       showToast(`MyGeotabから${vehicles.length}台の車両を取得しました`);
@@ -433,7 +574,9 @@
 
     document.querySelectorAll(".filter-chip").forEach((button) => {
       button.addEventListener("click", () => {
-        document.querySelectorAll(".filter-chip").forEach((item) => item.classList.remove("is-active"));
+        document.querySelectorAll(".filter-chip").forEach((item) => {
+          item.classList.remove("is-active");
+        });
         button.classList.add("is-active");
         activeFilter = button.dataset.filter || "all";
         renderTable();
@@ -458,8 +601,6 @@
   if (els.updatedAt) els.updatedAt.textContent = "--:--";
   render();
 
-  // The function name "fleetDashboard" must match the Add-In identifier
-  // expected by the existing index/configuration.
   window.geotab = window.geotab || {};
   window.geotab.addin = window.geotab.addin || {};
   window.geotab.addin.fleetDashboard = function () {
