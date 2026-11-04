@@ -749,6 +749,7 @@ return "warning";
     setText("allBadge", vehicles.length);
     setText("criticalBadge", counts.critical);
     setText("warningBadge", counts.warning);
+    setText("reviewBadge", counts.review);
     setText("normalBadge", counts.normal);
     setText("criticalCount", counts.critical);
     setText("warningCount", counts.warning);
