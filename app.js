@@ -568,6 +568,7 @@ return "warning";
   function buildVehicles(devices, statusInfos, faultData) {
     const statusByDevice = new Map();
     const latestFaultByDevice = new Map();
+    const faultCountByDevice = new Map();
 
     for (const statusInfo of statusInfos || []) {
       const deviceId = referenceId(statusInfo.device);
@@ -579,17 +580,28 @@ return "warning";
     );
 
     for (const fault of sortedFaults) {
-      const deviceId = referenceId(fault.device);
-      if (deviceId && !latestFaultByDevice.has(deviceId)) {
-        latestFaultByDevice.set(deviceId, fault);
-      }
-    }
+  const deviceId = referenceId(fault.device);
+
+  if (!deviceId) continue;
+
+  // 車両ごとの過去24時間の故障件数をカウント
+  faultCountByDevice.set(
+    deviceId,
+    (faultCountByDevice.get(deviceId) || 0) + 1
+  );
+
+  // 各車両の最新の故障を保存
+  if (!latestFaultByDevice.has(deviceId)) {
+    latestFaultByDevice.set(deviceId, fault);
+  }
+}
 
     return (devices || [])
       .filter((device) => device && device.id)
       .map((device) => {
         const statusInfo = statusByDevice.get(device.id) || null;
         const fault = latestFaultByDevice.get(device.id) || null;
+        const faultCount = faultCountByDevice.get(device.id) || 0;
         const level = classifyVehicle(fault, statusInfo);
         
         const diagnosticCategory =
@@ -627,6 +639,7 @@ return "warning";
           deviceId: device.id,
           driver: getDriverName(statusInfo?.driver),
           level,
+          faultCount,
          status: levelLabel[level],
           
          diagnosticCategory:
@@ -721,7 +734,10 @@ return "warning";
           <div class="detail-code">
           [${escapeHtml(vehicle.diagnosticCategoryLabel)}]
           ${escapeHtml(vehicle.code)}
-          </div>
+          ${vehicle.faultCount > 0
+    ? ` ｜ 過去${FAULT_LOOKBACK_HOURS}時間 ${vehicle.faultCount}回`
+    : ""}
+</div>
         </td>
         <td>${escapeHtml(vehicle.updated)}</td>
         <td>
@@ -777,6 +793,8 @@ return "warning";
       <span>診断分類</span>
       <strong>${escapeHtml(vehicle.diagnosticCategoryLabel)}</strong>
       </div>
+      
+      　<div class="detail-item"><span>発生回数</span><strong>${vehicle.faultCount}回 / 過去${FAULT_LOOKBACK_HOURS}時間</strong></div>
         <div class="detail-item"><span>運転者</span><strong>${escapeHtml(vehicle.driver)}</strong></div>
         <div class="detail-item"><span>最終更新</span><strong>${escapeHtml(vehicle.updated)}</strong></div>
         <div class="detail-item"><span>稼働状態</span><strong>${escapeHtml(vehicle.operation)}</strong></div>
