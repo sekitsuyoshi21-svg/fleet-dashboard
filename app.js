@@ -97,9 +97,90 @@
       .join(" ")
       .toLowerCase();
   }
+   function controllerText(diagnostic) {
+    const controller = diagnostic?.controller;
+    return [referenceId(controller), referenceName(controller)]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  }
 
-  function formatObdCode(diagnostic) {
-    if (!diagnostic || !sourceText(diagnostic).includes("obd")) return "";
+  const KNOWN_DIAGNOSTICS = {
+    "287": {
+      category: "telematics",
+      categoryLabel: "Geotab/テレマティクス",
+      title: "テレマティクスデバイスの障害",
+      detail: "エンジンとの通信に問題があります"
+    },
+    "292": {
+      category: "telematics",
+      categoryLabel: "Geotab/テレマティクス",
+      title: "テレマティクスデバイスの障害",
+      detail: "内部リセットが開始されました"
+    },
+    "678": {
+      category: "camera",
+      categoryLabel: "カメラ",
+      title: "カメラが取り外されています",
+      detail: "カメラの取り付け状態を確認してください"
+    }
+  };
+
+  function getDiagnostic(fault) {
+    return fault?.resolvedDiagnostic || fault?.diagnostic || null;
+  }
+
+  function getFailureMode(fault) {
+    return fault?.resolvedFailureMode || fault?.failureMode || null;
+  }
+
+  function getDiagnosticCodeValue(fault) {
+    const diagnostic = getDiagnostic(fault);
+
+    if (
+      diagnostic?.code !== undefined &&
+      diagnostic?.code !== null &&
+      diagnostic?.code !== ""
+    ) {
+      return String(diagnostic.code);
+    }
+
+    return "";
+  }
+
+  function getKnownDiagnostic(fault) {
+    const code = getDiagnosticCodeValue(fault);
+    return code ? KNOWN_DIAGNOSTICS[code] || null : null;
+  }
+
+  function isUnknownDiagnosticName(value) {
+    if (!value) return true;
+
+    const normalized = String(value).trim().toLowerCase();
+
+    return (
+      normalized === "unknown" ||
+      normalized.includes("unknown diagnostic") ||
+      normalized.includes("no diagnostic information") ||
+      normalized.includes("no subtype information") ||
+      normalized.includes("no sub type information") ||
+      normalized.includes("詳細不明")
+    );
+  }
+
+  function cleanDiagnosticName(value) {
+    if (!value || isUnknownDiagnosticName(value)) return "";
+
+    return String(value)
+      .replace(/^\*+/, "")
+      .replace(/\(no sub type information\)/gi, "")
+      .replace(/\(no subtype information\)/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+   
+    function formatObdCode(diagnostic) {
+  　if (!diagnostic || !sourceText(diagnostic).includes("obd")) return "";
 
     const controller = controllerText(diagnostic);
     let prefix = "";
@@ -127,88 +208,113 @@
 
     return [spn, fmi].filter(Boolean).join(" / ");
   }
-  function getDiagnosticCategory(fault) {
-  if (!fault) {
-    return {
-      key: "none",
-      label: "異常なし"
-    };
-  }
+    function getDiagnosticCategory(fault) {
+    if (!fault) {
+      return {
+        key: "none",
+        label: "異常なし"
+      };
+    }
 
-  const diagnostic =
-    fault.resolvedDiagnostic ||
-    fault.diagnostic ||
-    null;
+    const diagnostic = getDiagnostic(fault);
+    const knownDiagnostic = getKnownDiagnostic(fault);
+    const source = sourceText(diagnostic);
+    const controller = controllerText(diagnostic);
 
-  const source =
-    sourceText(diagnostic);
+    const description = [
+      referenceId(diagnostic),
+      referenceName(diagnostic),
+      fault.faultDescription || "",
+      fault.effectOnComponent || "",
+      fault.recommendation || ""
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-  const description = [
-    referenceName(diagnostic),
-    fault.faultDescription || "",
-    fault.effectOnComponent || ""
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  if (
-    source.includes("sourceobdid") ||
-    source.includes("sourceobdsaid") ||
-    source.includes("obd")
-  ) {
-    return {
-      key: "obd",
-      label: "OBD-II"
-    };
-  }
-
-  if (
-    source.includes("sourcej1939id") ||
-    source.includes("j1939")
-  ) {
-    return {
-      key: "j1939",
-      label: "J1939"
-    };
-  }
-
-  if (
-    description.includes("camera") ||
-    description.includes("video") ||
-    description.includes("dismount") ||
-    description.includes("lens") ||
-    description.includes("dashcam")
-  ) {
-    return {
-      key: "camera",
-      label: "カメラ"
-    };
-  }
-
+    // OBD-II
     if (
-    description.includes("telematics") ||
-    description.includes("テレマティクス") ||
-    description.includes("firmware") ||
-    description.includes("ファームウェア") ||
-    description.includes("internal reset") ||
-    description.includes("内部リセット")
-) {
-    return {
+      source.includes("sourceobdid") ||
+      source.includes("sourceobdsaid") ||
+      source.includes("obd") ||
+      controller.includes("powertrain") ||
+      controller.includes("body") ||
+      controller.includes("chassis") ||
+      controller.includes("network")
+    ) {
+      return {
+        key: "obd",
+        label: "OBD-II"
+      };
+    }
+
+    // J1939
+    if (
+      source.includes("sourcej1939id") ||
+      source.includes("j1939") ||
+      description.includes("spn ") ||
+      description.includes("fmi ")
+    ) {
+      return {
+        key: "j1939",
+        label: "J1939"
+      };
+    }
+
+    // 287・292・678など、先ほど登録した既知コード
+    if (knownDiagnostic) {
+      return {
+        key: knownDiagnostic.category,
+        label: knownDiagnostic.categoryLabel
+      };
+    }
+
+    // カメラ関連
+    if (
+      description.includes("camera") ||
+      description.includes("video") ||
+      description.includes("dismount") ||
+      description.includes("dismounted") ||
+      description.includes("lens") ||
+      description.includes("dashcam") ||
+      description.includes("カメラ") ||
+      description.includes("映像")
+    ) {
+      return {
+        key: "camera",
+        label: "カメラ"
+      };
+    }
+
+    // Geotab・テレマティクス関連
+    if (
+      description.includes("telematics") ||
+      description.includes("テレマティクス") ||
+      description.includes("firmware") ||
+      description.includes("ファームウェア") ||
+      description.includes("internal reset") ||
+      description.includes("内部リセット") ||
+      description.includes("can bus") ||
+      description.includes("device reset") ||
+      description.includes("go device")
+    ) {
+      return {
         key: "telematics",
         label: "Geotab/テレマティクス"
+      };
+    }
+
+    // どれにも該当しない場合
+    return {
+      key: "other",
+      label: "その他"
     };
-}
-    
-  return {
-    key: "other",
-    label: "その他"
-  };
-}
-  function getFaultCode(fault) {
+  }
+    function getFaultCode(fault) {
     if (!fault) return "";
 
-    const diagnostic = fault.resolvedDiagnostic || fault.diagnostic || null;
-    const failureMode = fault.resolvedFailureMode || fault.failureMode || null;
+    const diagnostic = getDiagnostic(fault);
+    const failureMode = getFailureMode(fault);
 
     const obdCode = formatObdCode(diagnostic);
     if (obdCode) return obdCode;
@@ -216,37 +322,111 @@
     const j1939Code = formatJ1939Code(diagnostic, failureMode);
     if (j1939Code) return j1939Code;
 
-    if (diagnostic?.code !== undefined && diagnostic?.code !== null) {
-      return `診断コード ${diagnostic.code}`;
+    const diagnosticCode = getDiagnosticCodeValue(fault);
+
+    if (diagnosticCode) {
+      return `診断コード ${diagnosticCode}`;
     }
 
     const diagnosticId = referenceId(fault.diagnostic);
-    return diagnosticId ? `Diagnostic ID: ${diagnosticId}` : "";
+
+    return diagnosticId
+      ? `Diagnostic ID: ${diagnosticId}`
+      : "";
   }
 
-  function getFaultDescription(fault) {
-    if (!fault) return "現在確認できる故障はありません";
+    function getFaultDescription(fault) {
+    if (!fault) {
+      return "現在確認できる故障はありません";
+    }
 
-    const diagnostic = fault.resolvedDiagnostic || fault.diagnostic || null;
-    const failureMode = fault.resolvedFailureMode || fault.failureMode || null;
-    const diagnosticName = referenceName(diagnostic);
-    const failureModeName = referenceName(failureMode);
+    const diagnostic = getDiagnostic(fault);
+    const failureMode = getFailureMode(fault);
+    const knownDiagnostic = getKnownDiagnostic(fault);
 
-    if (fault.faultDescription) return fault.faultDescription;
+    const diagnosticName = cleanDiagnosticName(
+      referenceName(diagnostic)
+    );
+
+    const failureModeName = cleanDiagnosticName(
+      referenceName(failureMode)
+    );
+
+    const faultDescription = cleanDiagnosticName(
+      fault.faultDescription
+    );
+
+    const effectOnComponent = cleanDiagnosticName(
+      fault.effectOnComponent
+    );
+
+    const recommendation = cleanDiagnosticName(
+      fault.recommendation
+    );
+
+    // MyGeotabから有効な故障説明が返っている場合
+    if (faultDescription) {
+      return faultDescription;
+    }
+
+    // 287、292、678など登録済みの診断コード
+    if (knownDiagnostic) {
+      return knownDiagnostic.detail
+        ? `${knownDiagnostic.title}: ${knownDiagnostic.detail}`
+        : knownDiagnostic.title;
+    }
+
     if (diagnosticName && failureModeName) {
       return `${diagnosticName}（${failureModeName}）`;
     }
-    if (diagnosticName) return diagnosticName;
-    if (fault.effectOnComponent) return fault.effectOnComponent;
-    if (failureModeName) return `故障モード：${failureModeName}`;
-    if (fault.recommendation) return fault.recommendation;
+
+    if (diagnosticName) {
+      return diagnosticName;
+    }
+
+    if (effectOnComponent) {
+      return effectOnComponent;
+    }
+
+    if (failureModeName) {
+      return `故障モード：${failureModeName}`;
+    }
+
+    if (recommendation) {
+      return recommendation;
+    }
+
+    // Unknown Diagnosticだった場合の表示
+    const category = getDiagnosticCategory(fault);
+    const faultCode = getFaultCode(fault);
+
+    if (category.key === "obd") {
+      return faultCode
+        ? `OBD-II診断コード ${faultCode}を検出しました`
+        : "OBD-II診断情報を検出しました";
+    }
+
+    if (category.key === "j1939") {
+      return faultCode
+        ? `J1939診断コード ${faultCode}を検出しました`
+        : "J1939診断情報を検出しました";
+    }
+
+    if (category.key === "camera") {
+      return "カメラに関する診断情報を検出しました";
+    }
+
+    if (category.key === "telematics") {
+      return "テレマティクスデバイスの診断情報を検出しました";
+    }
 
     const diagnosticId = referenceId(fault.diagnostic);
-    return diagnosticId
-      ? `診断情報あり（${diagnosticId}）`
-      : "詳細不明の故障情報";
-  }
 
+    return diagnosticId
+      ? `診断情報を検出しました（${diagnosticId}）`
+      : "詳細を確認できない診断情報があります";
+  }
+  
   function severityText(fault) {
     const severity = fault?.severity;
     if (!severity) return "";
