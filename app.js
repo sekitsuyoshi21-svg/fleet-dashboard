@@ -127,7 +127,69 @@
 
     return [spn, fmi].filter(Boolean).join(" / ");
   }
+  function getDiagnosticCategory(fault) {
+  if (!fault) {
+    return {
+      key: "none",
+      label: "異常なし"
+    };
+  }
 
+  const diagnostic =
+    fault.resolvedDiagnostic ||
+    fault.diagnostic ||
+    null;
+
+  const source =
+    sourceText(diagnostic);
+
+  const description = [
+    referenceName(diagnostic),
+    fault.faultDescription || "",
+    fault.effectOnComponent || ""
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    source.includes("sourceobdid") ||
+    source.includes("sourceobdsaid") ||
+    source.includes("obd")
+  ) {
+    return {
+      key: "obd",
+      label: "OBD-II"
+    };
+  }
+
+  if (
+    source.includes("sourcej1939id") ||
+    source.includes("j1939")
+  ) {
+    return {
+      key: "j1939",
+      label: "J1939"
+    };
+  }
+
+  if (
+    description.includes("camera") ||
+    description.includes("video") ||
+    description.includes("dismount") ||
+    description.includes("lens") ||
+    description.includes("dashcam")
+  ) {
+    return {
+      key: "camera",
+      label: "カメラ"
+    };
+  }
+
+  return {
+    key: "other",
+    label: "その他"
+  };
+}
   function getFaultCode(fault) {
     if (!fault) return "";
 
@@ -294,8 +356,15 @@
         const statusInfo = statusByDevice.get(device.id) || null;
         const fault = latestFaultByDevice.get(device.id) || null;
         const level = classifyVehicle(fault, statusInfo);
-        const description = getFaultDescription(fault);
-        const faultCode = getFaultCode(fault);
+        
+        const diagnosticCategory =
+          getDiagnosticCategory(fault);
+        
+        const description =
+          getFaultDescription(fault);
+        
+        const faultCode =
+          getFaultCode(fault);
 
         let title = "異常なし";
         let code = `直近${FAULT_LOOKBACK_HOURS}時間に故障情報はありません`;
@@ -318,9 +387,16 @@
           deviceId: device.id,
           driver: getDriverName(statusInfo?.driver),
           level,
-          status: levelLabel[level],
-          title,
-          code,
+         status: levelLabel[level],
+          
+         diagnosticCategory:
+          diagnosticCategory.key,
+         
+         diagnosticCategoryLabel:
+           diagnosticCategory.label,
+
+            title,
+            code,
           updated: formatTime(fault?.dateTime || statusInfo?.dateTime),
           operation: operationLabel(statusInfo),
           inspection: fault ? "確認が必要" : "異常なし",
@@ -402,7 +478,10 @@
         <td>${escapeHtml(vehicle.driver)}</td>
         <td>
           <div class="detail-title">${escapeHtml(vehicle.title)}</div>
-          <div class="detail-code">${escapeHtml(vehicle.code)}</div>
+          <div class="detail-code">
+          [${escapeHtml(vehicle.diagnosticCategoryLabel)}]
+          ${escapeHtml(vehicle.code)}
+          </div>
         </td>
         <td>${escapeHtml(vehicle.updated)}</td>
         <td>
@@ -452,6 +531,10 @@
         <p>${escapeHtml(vehicle.code)}</p>
       </div>
       <div class="detail-list">
+      <div class="detail-item">
+      <span>診断分類</span>
+      <strong>${escapeHtml(vehicle.diagnosticCategoryLabel)}</strong>
+      </div>
         <div class="detail-item"><span>運転者</span><strong>${escapeHtml(vehicle.driver)}</strong></div>
         <div class="detail-item"><span>最終更新</span><strong>${escapeHtml(vehicle.updated)}</strong></div>
         <div class="detail-item"><span>稼働状態</span><strong>${escapeHtml(vehicle.operation)}</strong></div>
