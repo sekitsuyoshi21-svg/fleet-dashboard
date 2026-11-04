@@ -552,7 +552,12 @@
         const level = classifyVehicle(fault, statusInfo);
         
         const diagnosticCategory =
-          getDiagnosticCategory(fault);
+          !fault && statusInfo?.isDeviceCommunicating === false
+            ? {
+              key: "communication",
+              label: "通信異常"
+              }
+            : getDiagnosticCategory(fault);
         
         const description =
           getFaultDescription(fault);
