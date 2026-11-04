@@ -65,7 +65,37 @@
       minute: "2-digit"
     });
   }
+　function formatElapsedTime(value) {
+  if (!value) return "";
 
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const diffMs = Date.now() - date.getTime();
+
+  if (diffMs < 0) return "たった今";
+
+  const minutes = Math.floor(diffMs / (60 * 1000));
+
+  if (minutes < 1) {
+    return "たった今";
+  }
+
+  if (minutes < 60) {
+    return `${minutes}分前`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}時間前`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  return `${days}日前`;
+}
   function geotabCall(method, params) {
     return new Promise((resolve, reject) => {
       if (!api || typeof api.call !== "function") {
@@ -651,6 +681,7 @@ return "warning";
             title,
             code,
           updated: formatTime(fault?.dateTime || statusInfo?.dateTime),
+          elapsed: formatElapsedTime(fault?.dateTime || statusInfo?.dateTime),
           operation: operationLabel(statusInfo),
           inspection: fault ? "確認が必要" : "異常なし",
           speed: Number.isFinite(statusInfo?.speed) ? statusInfo.speed : null,
@@ -739,7 +770,16 @@ return "warning";
     : ""}
 </div>
         </td>
-        <td>${escapeHtml(vehicle.updated)}</td>
+        <td>
+  <div>${escapeHtml(vehicle.updated)}</div>
+  <div class="vehicle-sub">
+    ${escapeHtml(
+      vehicle.isCommunicating === false
+        ? `最終通信 ${vehicle.elapsed}`
+        : vehicle.elapsed
+    )}
+  </div>
+</td>
         <td>
           <button class="chevron-button" type="button" aria-label="${escapeHtml(vehicle.id)}の詳細" data-open="${escapeHtml(vehicle.deviceId)}">›</button>
         </td>
