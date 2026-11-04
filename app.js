@@ -25,12 +25,14 @@
   const levelLabel = {
     critical: "要対応",
     warning: "要注意",
+    review: "確認",
     normal: "正常"
   };
 
   const levelDot = {
     critical: "red",
     warning: "amber",
+    review: "blue",
     normal: "green"
   };
 
@@ -494,30 +496,69 @@
       };
     });
   }
-
-  function classifyVehicle(fault, statusInfo) {
-    if (fault) {
-      const severeLamp = fault.redStopLamp === true || fault.malfunctionLamp === true;
-      const warningLamp = fault.amberWarningLamp === true || fault.protectWarningLamp === true;
-      const severity = severityText(fault);
-
-      if (
-        severeLamp ||
-        severity.includes("critical") ||
-        severity.includes("severe") ||
-        severity.includes("high")
-      ) {
-        return "critical";
-      }
-
-      if (warningLamp || severity) return "warning";
-      return "warning";
-    }
-
-    if (statusInfo && statusInfo.isDeviceCommunicating === false) return "warning";
-    return "normal";
-  }
-
+function classifyVehicle(fault, statusInfo) {
+// 通信していない車両は「要注意」
+if (!fault && statusInfo?.isDeviceCommunicating === false) {
+return "warning";
+}
+ 
+if (!fault) {
+return "normal";
+}
+ 
+const diagnostic = getDiagnostic(fault);
+const category = getDiagnosticCategory(fault);
+const code = String(diagnostic?.code ?? "");
+const severity = severityText(fault);
+ 
+const severeLamp =
+fault.redStopLamp === true ||
+fault.malfunctionLamp === true;
+ 
+const warningLamp =
+fault.amberWarningLamp === true ||
+fault.protectWarningLamp === true;
+ 
+// 🔴 重大故障
+if (
+severeLamp ||
+severity.includes("critical") ||
+severity.includes("severe") ||
+severity.includes("high")
+) {
+return "critical";
+}
+ 
+// 🔵 カメラ関連
+if (category.key === "camera") {
+return "review";
+}
+ 
+// 🔵 Geotab / テレマティクスの情報系
+if (
+category.key === "telematics" &&
+["132", "287", "292"].includes(code)
+) {
+return "review";
+}
+ 
+// 🟠 警告ランプ
+if (warningLamp) {
+return "warning";
+}
+ 
+// 🟠 OBD-II / J1939故障
+if (
+category.key === "obd" ||
+category.key === "j1939"
+) {
+return "warning";
+}
+ 
+// 🟠 その他の故障
+return "warning";
+}
+  
   function operationLabel(statusInfo) {
     if (!statusInfo) return "状態不明";
     if (statusInfo.isDeviceCommunicating === false) return "通信なし";
@@ -609,7 +650,7 @@
         };
       })
       .sort((a, b) => {
-        const order = { critical: 0, warning: 1, normal: 2 };
+        const order = { critical: 0, warning: 1, review: 2, normal: 3 };
         return order[a.level] - order[b.level] || a.id.localeCompare(b.id, "ja");
       });
   }
@@ -701,6 +742,7 @@
     const counts = {
       critical: vehicles.filter((vehicle) => vehicle.level === "critical").length,
       warning: vehicles.filter((vehicle) => vehicle.level === "warning").length,
+      review: vehicles.filter((vehicle) => vehicle.level === "review").length,
       normal: vehicles.filter((vehicle) => vehicle.level === "normal").length
     };
 
