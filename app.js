@@ -185,6 +185,20 @@
     };
   }
 
+    if (
+    description.includes("telematics") ||
+    description.includes("テレマティクス") ||
+    description.includes("firmware") ||
+    description.includes("ファームウェア") ||
+    description.includes("internal reset") ||
+    description.includes("内部リセット")
+) {
+    return {
+        key: "telematics",
+        label: "Geotab/テレマティクス"
+    };
+}
+    
   return {
     key: "other",
     label: "その他"
