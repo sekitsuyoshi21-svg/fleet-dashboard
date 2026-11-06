@@ -849,6 +849,20 @@ ${vehicle.faultCount > 0
     const vehicle = vehicles.find((item) => item.deviceId === deviceId);
     if (!vehicle || !els.drawer || !els.backdrop || !els.drawerBody) return;
 
+  let actionRecord = null;
+
+  try {
+    const savedAction = localStorage.getItem(
+      `fleetAction_${vehicle.deviceId}`
+    );
+
+    if (savedAction) {
+      actionRecord = JSON.parse(savedAction);
+    }
+  } catch (error) {
+    console.warn("対応記録の読み込みに失敗しました。", error);
+  }
+
     if (els.drawerTitle) els.drawerTitle.textContent = vehicle.id;
     const speed = vehicle.speed === null ? "--" : `${Math.round(vehicle.speed)} km/h`;
     const coordinates = vehicle.latitude !== null && vehicle.longitude !== null
@@ -875,6 +889,20 @@ ${vehicle.faultCount > 0
         <div class="detail-item"><span>点検状態</span><strong>${escapeHtml(vehicle.inspection)}</strong></div>
         <div class="detail-item"><span>位置</span><strong>${escapeHtml(coordinates)}</strong></div>
       </div>
+      ${actionRecord ? `
+  <div class="action-record">
+    <h3>対応記録</h3>
+    <div class="detail-list">
+      <div class="detail-item"><span>対応状況</span><strong>${escapeHtml(actionRecord.status)}</strong></div>
+      <div class="detail-item"><span>担当者</span><strong>${escapeHtml(actionRecord.person)}</strong></div>
+      <div class="detail-item"><span>対応内容</span><strong>${escapeHtml(actionRecord.content)}</strong></div>
+      ${actionRecord.memo
+        ? `<div class="detail-item"><span>メモ</span><strong>${escapeHtml(actionRecord.memo)}</strong></div>`
+        : ""}
+      <div class="detail-item"><span>記録日時</span><strong>${escapeHtml(new Date(actionRecord.recordedAt).toLocaleString("ja-JP"))}</strong></div>
+    </div>
+  </div>
+` : ""}
       <div class="next-action">
         <h3>推奨する次の操作</h3>
         <ol>
@@ -882,7 +910,7 @@ ${vehicle.faultCount > 0
           <li>過去の同一事象を確認</li>
           <li>整備または点検の要否を判断</li>
         </ol>
-        <button id="recordActionButton" class="button button--primary drawer-action" type="button">対応を記録する</button>
+        <button id="recordActionButton" class="button button--primary drawer-action" type="button">${actionRecord ? "対応内容を編集する" : "対応を記録する"}</button>
       </div>`;
 
     els.backdrop.hidden = false;
@@ -891,10 +919,148 @@ ${vehicle.faultCount > 0
 
     setTimeout(() => {
       $("recordActionButton")?.addEventListener("click", () => {
-        showToast("対応記録機能は次の実装ステップです");
+        openActionForm(vehicle);
       });
     }, 0);
   }
+　function openActionForm(vehicle) {
+  if (!els.drawerBody) return;
+　let savedRecord = null;
+
+  try {
+    const savedAction = localStorage.getItem(
+      `fleetAction_${vehicle.deviceId}`
+    );
+
+    if (savedAction) {
+      savedRecord = JSON.parse(savedAction);
+    }
+  } catch (error) {
+    console.warn("対応記録の読み込みに失敗しました。", error);
+  }
+  const now = new Date();
+  const recordedAt = now.toLocaleString("ja-JP");
+  
+　const previousRecordedAt = savedRecord?.recordedAt
+  ? new Date(savedRecord.recordedAt).toLocaleString("ja-JP")
+  : "";
+   
+  els.drawerBody.innerHTML = `
+    <div class="action-form">
+      <h3>対応を記録する</h3>
+
+      <div class="action-form-item">
+        <label for="actionStatus">対応状況</label>
+        <select id="actionStatus">
+          <option value="対応中" ${!savedRecord || savedRecord.status === "対応中" ? "selected" : ""}>対応中</option>
+          <option value="対応済み" ${savedRecord?.status === "対応済み" ? "selected" : ""}>対応済み</option>
+        </select>
+      </div>
+
+      <div class="action-form-item">
+        <label for="actionPerson">担当者</label>
+        <input
+  id="actionPerson"
+  type="text"
+  value="${escapeHtml(savedRecord?.person || "")}"
+  placeholder="担当者名を入力"
+　>
+      </div>
+
+      <div class="action-form-item">
+        <label for="actionContent">対応内容</label>
+        <input
+          id="actionContent"
+          type="text"
+          value="${escapeHtml(savedRecord?.content || "")}"
+          placeholder="例：整備工場へ点検を依頼"
+        >
+      </div>
+
+      <div class="action-form-item">
+        <label for="actionMemo">メモ</label>
+        <textarea
+          id="actionMemo"
+          rows="4"
+          placeholder="対応内容や確認事項を入力"
+        >${escapeHtml(savedRecord?.memo || "")}</textarea>
+      </div>
+
+      ${savedRecord ? `
+  <div class="action-form-item">
+    <span>前回記録日時</span>
+    <strong>${escapeHtml(previousRecordedAt)}</strong>
+  </div>
+  <div class="action-form-item">
+    <span>今回更新日時</span>
+    <strong>${escapeHtml(recordedAt)}</strong>
+  </div>
+` : `
+  <div class="action-form-item">
+    <span>記録日時</span>
+    <strong>${escapeHtml(recordedAt)}</strong>
+  </div>
+`}
+
+      <button
+        id="saveActionButton"
+        class="button button--primary drawer-action"
+        type="button"
+      >
+        保存する
+      </button>
+
+      <button
+        id="cancelActionButton"
+        class="button drawer-action"
+        type="button"
+      >
+        キャンセル
+      </button>
+    </div>
+  `;
+
+  $("cancelActionButton")?.addEventListener("click", () => {
+    openDrawer(vehicle.deviceId);
+  });
+
+  $("saveActionButton")?.addEventListener("click", () => {
+  const status = $("actionStatus")?.value || "対応中";
+  const person = $("actionPerson")?.value.trim() || "";
+  const content = $("actionContent")?.value.trim() || "";
+  const memo = $("actionMemo")?.value.trim() || "";
+
+  if (!person) {
+    showToast("担当者を入力してください");
+    return;
+  }
+
+  if (!content) {
+    showToast("対応内容を入力してください");
+    return;
+  }
+
+  const record = {
+    vehicleId: vehicle.deviceId,
+    status,
+    person,
+    content,
+    memo,
+    recordedAt: new Date().toISOString()
+  };
+
+  const storageKey = `fleetAction_${vehicle.deviceId}`;
+
+  localStorage.setItem(
+    storageKey,
+    JSON.stringify(record)
+  );
+
+  showToast("対応内容を保存しました");
+
+  openDrawer(vehicle.deviceId);
+});
+}
 
   function closeDrawer() {
     if (!els.drawer || !els.backdrop) return;
