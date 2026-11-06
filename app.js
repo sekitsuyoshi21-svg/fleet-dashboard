@@ -844,8 +844,40 @@ ${vehicle.faultCount > 0
     setText("warningCount", counts.warning);
     setText("activeCount", vehicles.filter((vehicle) => vehicle.isCommunicating !== false).length);
   }
+　async function getApproximateLocation(latitude, longitude, isMoving = false) {
+  if (latitude === null || longitude === null) {
+    return "位置情報なし";
+  }
 
-  function openDrawer(deviceId) {
+  try {
+    const addresses = await geotabCall("GetAddresses", {
+      coordinates: [
+        {
+          x: Number(longitude),
+          y: Number(latitude)
+        }
+      ],
+      movingAddresses: isMoving
+    });
+
+    if (!addresses || !addresses.length) {
+      return "地域情報を取得できません";
+    }
+
+    const address = addresses[0];
+
+    return (
+      address.city ||
+      address.formattedAddress ||
+      address.street ||
+      "地域情報を取得できません"
+    );
+  } catch (error) {
+    console.warn("住所情報の取得に失敗しました。", error);
+    return "地域情報を取得できません";
+  }
+}
+  async function openDrawer(deviceId) {
     const vehicle = vehicles.find((item) => item.deviceId === deviceId);
     if (!vehicle || !els.drawer || !els.backdrop || !els.drawerBody) return;
 
@@ -865,9 +897,11 @@ ${vehicle.faultCount > 0
 
     if (els.drawerTitle) els.drawerTitle.textContent = vehicle.id;
     const speed = vehicle.speed === null ? "--" : `${Math.round(vehicle.speed)} km/h`;
-    const coordinates = vehicle.latitude !== null && vehicle.longitude !== null
-      ? `${Number(vehicle.latitude).toFixed(5)}, ${Number(vehicle.longitude).toFixed(5)}`
-      : "位置情報なし";
+    const approximateLocation = await getApproximateLocation(
+    vehicle.latitude,
+    vehicle.longitude,
+    vehicle.speed !== null && vehicle.speed > 0
+  );
 
     els.drawerBody.innerHTML = `
       <div class="drawer-status ${escapeHtml(vehicle.level)}">
@@ -887,7 +921,7 @@ ${vehicle.faultCount > 0
         <div class="detail-item"><span>稼働状態</span><strong>${escapeHtml(vehicle.operation)}</strong></div>
         <div class="detail-item"><span>速度</span><strong>${escapeHtml(speed)}</strong></div>
         <div class="detail-item"><span>点検状態</span><strong>${escapeHtml(vehicle.inspection)}</strong></div>
-        <div class="detail-item"><span>位置</span><strong>${escapeHtml(coordinates)}</strong></div>
+        <div class="detail-item"><span>位置</span><strong>${escapeHtml(approximateLocation)}</strong></div>
       </div>
       ${actionRecord ? `
   <div class="action-record">
