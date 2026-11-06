@@ -798,10 +798,12 @@ try {
           <span class="status-pill status-pill--${escapeHtml(vehicle.level)}">
             <span class="dot dot--${levelDot[vehicle.level]}"></span>${escapeHtml(vehicle.status)}
           </span>
-          <span class="action-status action-status--${vehicle.actionStatus === "対応済み" ? "done" : vehicle.actionStatus === "対応中" ? "progress" : "pending"}">
-  ${vehicle.actionStatus === "対応済み" ? "✓ " : vehicle.actionStatus === "対応中" ? "● " : "○ "}
-  ${escapeHtml(vehicle.actionStatus)}
-</span>
+          ${vehicle.level !== "normal" ? `
+  <span class="action-status action-status--${vehicle.actionStatus === "対応済み" ? "done" : vehicle.actionStatus === "対応中" ? "progress" : "pending"}">
+    ${vehicle.actionStatus === "対応済み" ? "✓ " : vehicle.actionStatus === "対応中" ? "● " : "○ "}
+    ${escapeHtml(vehicle.actionStatus)}
+  </span>
+` : ""}
         </td>
         <td>${escapeHtml(vehicle.driver)}</td>
         <td>
