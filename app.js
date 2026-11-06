@@ -657,6 +657,20 @@ return "warning";
         const statusInfo = statusByDevice.get(device.id) || null;
         const fault = latestFaultByDevice.get(device.id) || null;
         const faultCount = faultCountByDevice.get(device.id) || 0;
+        let actionRecord = null;
+
+try {
+  const savedAction = localStorage.getItem(
+    `fleetAction_${device.id}`
+  );
+
+  if (savedAction) {
+    actionRecord = JSON.parse(savedAction);
+  }
+} catch (error) {
+  console.warn("対応記録の読み込みに失敗しました。", error);
+}
+        const actionStatus = actionRecord?.status || "未対応";
         const level = classifyVehicle(fault, statusInfo);
         
         const diagnosticCategory =
@@ -695,6 +709,7 @@ return "warning";
           driver: getDriverName(statusInfo?.driver),
           level,
           faultCount,
+          actionStatus,
          status: levelLabel[level],
           
          diagnosticCategory:
@@ -783,6 +798,10 @@ return "warning";
           <span class="status-pill status-pill--${escapeHtml(vehicle.level)}">
             <span class="dot dot--${levelDot[vehicle.level]}"></span>${escapeHtml(vehicle.status)}
           </span>
+          <span class="action-status action-status--${vehicle.actionStatus === "対応済み" ? "done" : vehicle.actionStatus === "対応中" ? "progress" : "pending"}">
+  ${vehicle.actionStatus === "対応済み" ? "✓ " : vehicle.actionStatus === "対応中" ? "● " : "○ "}
+  ${escapeHtml(vehicle.actionStatus)}
+</span>
         </td>
         <td>${escapeHtml(vehicle.driver)}</td>
         <td>
