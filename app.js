@@ -24,6 +24,7 @@
 
   const levelLabel = {
     critical: "要対応",
+    inspection: "要点検",
     warning: "要注意",
     review: "要確認",
     normal: "正常"
@@ -31,6 +32,7 @@
 
   const levelDot = {
     critical: "red",
+    inspection: "violet",
     warning: "amber",
     review: "blue",
     normal: "green"
@@ -558,7 +560,30 @@ severity.includes("high")
 ) {
 return "critical";
 }
- 
+
+// 🟣 要点検：SCR / NOx / 排気後処理系
+    const diagnosticText = [
+      referenceName(diagnostic),
+      fault.faultDescription || "",
+      fault.effectOnComponent || "",
+      fault.recommendation || ""
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (
+      diagnosticText.includes("scr nox") ||
+      diagnosticText.includes("catalyst efficiency") ||
+      diagnosticText.includes("触媒効率") ||
+      diagnosticText.includes("nox触媒") ||
+      diagnosticText.includes("nox catalyst") ||
+      diagnosticText.includes("def system") ||
+      diagnosticText.includes("adblue")
+    ) {
+      return "inspection";
+    }
+
 // 🔵 カメラ関連
 if (category.key === "camera") {
 return "review";
@@ -694,7 +719,7 @@ return "warning";
         };
       })
       .sort((a, b) => {
-        const order = { critical: 0, warning: 1, review: 2, normal: 3 };
+        const order = { critical: 0, inspection: 1, warning: 2, review: 3, normal: 4 };
         return order[a.level] - order[b.level] || a.id.localeCompare(b.id, "ja");
       });
   }
@@ -797,6 +822,7 @@ return "warning";
   function renderCounts() {
     const counts = {
       critical: vehicles.filter((vehicle) => vehicle.level === "critical").length,
+      inspection: vehicles.filter((vehicle) => vehicle.level === "inspection").length,
       warning: vehicles.filter((vehicle) => vehicle.level === "warning").length,
       review: vehicles.filter((vehicle) => vehicle.level === "review").length,
       normal: vehicles.filter((vehicle) => vehicle.level === "normal").length
@@ -804,6 +830,7 @@ return "warning";
 
     setText("allBadge", vehicles.length);
     setText("criticalBadge", counts.critical);
+    setText("inspectionBadge", counts.inspection);
     setText("warningBadge", counts.warning);
     setText("reviewBadge", counts.review);
     setText("normalBadge", counts.normal);
