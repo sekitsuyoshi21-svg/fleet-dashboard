@@ -787,13 +787,19 @@ return "warning";
         <td>${escapeHtml(vehicle.driver)}</td>
         <td>
           <div class="detail-title">${escapeHtml(vehicle.title)}</div>
-          <div class="detail-code">
-          [${escapeHtml(vehicle.diagnosticCategoryLabel)}]
-          ${escapeHtml(vehicle.code)}
-          ${vehicle.faultCount > 0
-    ? ` ｜ 過去${FAULT_LOOKBACK_HOURS}時間 ${vehicle.faultCount}回`
-    : ""}
+         <div class="detail-code">
+  [${escapeHtml(vehicle.diagnosticCategoryLabel)}]
+  ${escapeHtml(vehicle.code)}
 </div>
+${vehicle.faultCount > 0
+  ? `<div class="fault-frequency ${
+      vehicle.faultCount >= 10
+        ? "fault-frequency--high"
+        : vehicle.faultCount >= 3
+          ? "fault-frequency--medium"
+          : "fault-frequency--low"
+    }">⚠ ${FAULT_LOOKBACK_HOURS}時間で${vehicle.faultCount}回発生</div>`
+  : ""}
         </td>
         <td>
   <div>${escapeHtml(vehicle.updated)}</div>
