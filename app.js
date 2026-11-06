@@ -866,12 +866,22 @@ ${vehicle.faultCount > 0
 
     const address = addresses[0];
 
-    return (
-      address.city ||
-      address.formattedAddress ||
-      address.street ||
-      "地域情報を取得できません"
-    );
+    const detailedLocation = [
+  address.state,
+  address.city
+]
+  .filter(Boolean)
+  .join(" ");
+
+if (detailedLocation) {
+  return `${detailedLocation}付近`;
+}
+
+return (
+  address.formattedAddress ||
+  address.street ||
+  "地域情報を取得できません"
+);
   } catch (error) {
     console.warn("住所情報の取得に失敗しました。", error);
     return "地域情報を取得できません";
