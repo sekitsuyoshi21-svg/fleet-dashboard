@@ -867,7 +867,24 @@ ${vehicle.faultCount > 0
     const address = addresses[0];
 
    if (address.formattedAddress) {
-  return `${address.formattedAddress}付近`;
+  const formatted = address.formattedAddress
+    .replace(/^日本、?\s*/, "")
+    .replace(/〒\s*\d{3}-\d{4}\s*/, "")
+    .trim();
+
+  const match = formatted.match(
+    /^(.+?[都道府県])(.+?市)?(.+?区)?/
+  );
+
+  if (match) {
+    const prefecture = match[1] || "";
+    const city = match[2] || "";
+    const ward = match[3] || "";
+
+    return `${prefecture}${city}${ward}付近`;
+  }
+
+  return `${formatted}付近`;
 }
 
 return (
