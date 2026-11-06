@@ -25,7 +25,7 @@
   const levelLabel = {
     critical: "要対応",
     warning: "要注意",
-    review: "確認",
+    review: "要確認",
     normal: "正常"
   };
 
