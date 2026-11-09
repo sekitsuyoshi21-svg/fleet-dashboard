@@ -955,6 +955,16 @@ return (
     return "地域情報を取得できません";
   }
 }
+
+function openVehicleOnMap(deviceId) {
+  if (!deviceId) return;
+
+  const baseUrl = window.location.href.split("#")[0];
+  const mapUrl = `${baseUrl}#map,liveVehicleIds:!(${deviceId})`;
+
+  window.top.location.href = mapUrl;
+}
+  
   async function openDrawer(deviceId) {
     const vehicle = vehicles.find((item) => item.deviceId === deviceId);
     if (!vehicle || !els.drawer || !els.backdrop || !els.drawerBody) return;
@@ -999,7 +1009,16 @@ return (
         <div class="detail-item"><span>稼働状態</span><strong>${escapeHtml(vehicle.operation)}</strong></div>
         <div class="detail-item"><span>速度</span><strong>${escapeHtml(speed)}</strong></div>
         <div class="detail-item"><span>点検状態</span><strong>${escapeHtml(vehicle.inspection)}</strong></div>
-        <div class="detail-item"><span>位置</span><strong>${escapeHtml(approximateLocation)}</strong></div>
+        <div class="detail-item">
+  <span>位置</span>
+  <button
+    id="openMapButton"
+    class="location-link"
+    type="button"
+  >
+    📍 ${escapeHtml(approximateLocation)} ＞
+  </button>
+</div>
       </div>
       ${actionRecord ? `
   <div class="action-record">
@@ -1029,6 +1048,10 @@ return (
     els.drawer.classList.add("is-open");
     els.drawer.setAttribute("aria-hidden", "false");
 
+    $("openMapButton")?.addEventListener("click", () => {
+  openVehicleOnMap(vehicle.deviceId);
+});
+    
     setTimeout(() => {
       $("recordActionButton")?.addEventListener("click", () => {
         openActionForm(vehicle);
