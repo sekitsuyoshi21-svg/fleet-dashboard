@@ -98,6 +98,29 @@
 
   return `${days}日前`;
 }
+  function getCommunicationAgeLevel(value) {
+  if (!value) return "unknown";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "unknown";
+
+  const diffMs = Date.now() - date.getTime();
+  const hours = diffMs / (60 * 60 * 1000);
+
+  if (hours < 6) {
+    return "recent";
+  }
+
+  if (hours < 24) {
+    return "warning";
+  }
+
+  if (hours < 24 * 7) {
+    return "stale";
+  }
+
+  return "critical";
+}
   function geotabCall(method, params) {
     return new Promise((resolve, reject) => {
       if (!api || typeof api.call !== "function") {
@@ -720,9 +743,12 @@ try {
 
             title,
             code,
-          updated: formatTime(fault?.dateTime || statusInfo?.dateTime),
-          elapsed: formatElapsedTime(fault?.dateTime || statusInfo?.dateTime),
-          operation: operationLabel(statusInfo),
+         updated: formatTime(fault?.dateTime || statusInfo?.dateTime),
+elapsed: formatElapsedTime(fault?.dateTime || statusInfo?.dateTime),
+communicationAgeLevel: getCommunicationAgeLevel(
+  statusInfo?.dateTime
+),
+operation: operationLabel(statusInfo),
           inspection: fault ? "確認が必要" : "異常なし",
           speed: Number.isFinite(statusInfo?.speed) ? statusInfo.speed : null,
           latitude: statusInfo?.latitude ?? null,
@@ -829,14 +855,18 @@ ${vehicle.faultCount > 0
   : ""}
         </td>
         <td>
-  <div>${escapeHtml(vehicle.updated)}</div>
-  <div class="vehicle-sub">
-    ${escapeHtml(
-      vehicle.isCommunicating === false
-        ? `最終通信 ${vehicle.elapsed}`
-        : vehicle.elapsed
-    )}
-  </div>
+ <div>${escapeHtml(vehicle.updated)}</div>
+<div class="vehicle-sub ${
+  vehicle.isCommunicating === false
+    ? `communication-age communication-age--${vehicle.communicationAgeLevel}`
+    : ""
+}">
+  ${escapeHtml(
+    vehicle.isCommunicating === false
+      ? `最終通信 ${vehicle.elapsed}`
+      : vehicle.elapsed
+  )}
+</div>
 </td>
         <td>
           <button class="chevron-button" type="button" aria-label="${escapeHtml(vehicle.id)}の詳細" data-open="${escapeHtml(vehicle.deviceId)}">›</button>
