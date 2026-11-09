@@ -778,7 +778,13 @@ try {
   function filteredVehicles() {
     const query = (els.search?.value || "").trim().toLowerCase();
     return vehicles.filter((vehicle) => {
-      const filterMatch = activeFilter === "all" || vehicle.level === activeFilter;
+      const filterMatch =
+  　　　activeFilter === "all"
+    　　　? true
+    　　　: activeFilter === "pending"
+      　　　? vehicle.actionStatus === "未対応" && vehicle.level !== "normal"
+     　　　 : vehicle.level === activeFilter;
+      
       const text = `${vehicle.id} ${vehicle.name} ${vehicle.driver} ${vehicle.title} ${vehicle.code}`.toLowerCase();
       return filterMatch && (!query || text.includes(query));
     });
