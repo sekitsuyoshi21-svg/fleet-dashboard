@@ -1314,26 +1314,40 @@ try {
 } catch (error) {
   console.warn("Camera情報を取得できませんでした。", error);
 }
-     let cameraEvents = [];
+    let cameraEvents = [];
 
 try {
   const videoEventFromDate = new Date(
     Date.now() - 7 * 24 * 60 * 60 * 1000
   );
 
-  cameraEvents = await videoApiGet("CameraEvent", {
-    fromDate: videoEventFromDate.toISOString(),
-    toDate: new Date().toISOString(),
-    page: 0,
-    size: 100,
-    sort: "BY_TIMESTAMP_DESC"
-  });
+  const videoEventToDate = new Date();
+  const pageSize = 100;
+  let page = 0;
+  let currentPage = [];
 
-  console.table(cameraEvents);
+  do {
+    currentPage = await videoApiGet("CameraEvent", {
+      fromDate: videoEventFromDate.toISOString(),
+      toDate: videoEventToDate.toISOString(),
+      page,
+      size: pageSize,
+      sort: "BY_TIMESTAMP_DESC"
+    });
 
-　if (cameraEvents.length > 0) {
-  console.warn("CameraEventのサンプル:", cameraEvents[0]);
-}
+    cameraEvents.push(...currentPage);
+    page += 1;
+  } while (currentPage.length === pageSize);
+
+  console.log(
+    `過去7日間のCameraEventを${cameraEvents.length}件取得しました`
+  );
+} catch (error) {
+  console.warn(
+    "Video APIからCameraEventを取得できませんでした。",
+    error
+  );
+} 
   
 } catch (error) {
   console.warn("Video APIからCameraEventを取得できませんでした。", error);
