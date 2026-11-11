@@ -1280,7 +1280,24 @@ console.table(
     licensePlate: device.licensePlate
   }))
 );
-      const deviceIds = (devices || []).map((device) => device.id).filter(Boolean);
+      const filteredDevices = (devices || []).filter((device, index, array) => {
+  // アセット画面に存在しないことを確認したDeviceを除外
+  if (device.name === "D71-1903") {
+    return false;
+  }
+
+  // 同じ名前のDeviceが複数ある場合は最初の1件だけ残す
+  const firstIndex = array.findIndex((item) => item.name === device.name);
+
+  if (firstIndex !== index) {
+    return false;
+  }
+
+  return true;
+});
+      const deviceIds = filteredDevices
+  .map((device) => device.id)
+  .filter(Boolean);
 
       if (deviceIds.length === 0) {
         vehicles = [];
@@ -1306,7 +1323,7 @@ console.table(
       ]);
 
       const faultData = await enrichFaultDetails(rawFaultData);
-      vehicles = buildVehicles(devices, statusInfos, faultData);
+      vehicles = buildVehicles(filteredDevices, statusInfos, faultData);
 
       render();
       if (els.updatedAt) els.updatedAt.textContent = formatTime(now);
