@@ -157,7 +157,11 @@ async function videoApiGet(typeName, search = {}) {
   const serverUrl = /^https?:\/\//i.test(server)
     ? server
     : `https://${server}`;
-
+  
+　console.warn("Video API params:", {
+  typeName,
+  ...search
+});
   const response = await fetch(
     `${serverUrl.replace(/\/$/, "")}/apiv1`,
     {
