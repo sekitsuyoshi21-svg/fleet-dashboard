@@ -168,13 +168,19 @@ async function videoApiGet(typeName, search = {}) {
       body: JSON.stringify({
         method: "Get",
         params: {
-          typeName,
-          credentials: {
-            database: session.database,
-            userName: session.userName,
-            sessionId: session.sessionId
-          },
-          ...search
+  typeName,
+  credentials: {
+    database: session.database,
+    userName: session.userName,
+    sessionId: session.sessionId
+  },
+  search: {
+    fromDate: search.fromDate,
+    toDate: search.toDate
+  },
+  page: search.page,
+  size: search.size
+}
         }
       })
     }
