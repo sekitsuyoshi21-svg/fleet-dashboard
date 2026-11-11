@@ -130,7 +130,70 @@
       api.call(method, params, resolve, reject);
     });
   }
+　function getGeotabSession() {
+  return new Promise((resolve, reject) => {
+    if (!api || typeof api.getSession !== "function") {
+      reject(new Error("MyGeotabセッションを取得できません。"));
+      return;
+    }
 
+    api.getSession((session, server) => {
+      if (!session?.database || !session?.userName || !session?.sessionId) {
+        reject(new Error("MyGeotabセッション情報が不足しています。"));
+        return;
+      }
+
+      resolve({
+        session,
+        server
+      });
+    });
+  });
+}
+
+async function videoApiGet(typeName, search = {}) {
+  const { session, server } = await getGeotabSession();
+
+  const serverUrl = /^https?:\/\//i.test(server)
+    ? server
+    : `https://${server}`;
+
+  const response = await fetch(
+    `${serverUrl.replace(/\/$/, "")}/apiv1`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        method: "Get",
+        params: {
+          typeName,
+          credentials: {
+            database: session.database,
+            userName: session.userName,
+            sessionId: session.sessionId
+          },
+          search
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Video API HTTPエラー: ${response.status}`);
+  }
+
+  const result = await response.json();
+
+  if (result.error) {
+    throw new Error(
+      result.error.message || "Video APIの呼び出しに失敗しました。"
+    );
+  }
+
+  return result.result || [];
+}
   function getDriverName(driver) {
     if (!driver) return "未割当";
     if (driver.name) return driver.name;
@@ -1251,26 +1314,26 @@ try {
 } catch (error) {
   console.warn("Camera情報を取得できませんでした。", error);
 }
-      let cameraEvents = [];
+     let cameraEvents = [];
 
 try {
   const videoEventFromDate = new Date(
     Date.now() - 7 * 24 * 60 * 60 * 1000
   );
 
-  cameraEvents = await geotabCall("Get", {
-    typeName: "CameraEvent",
-    search: {
-      fromDate: videoEventFromDate.toISOString(),
-      toDate: new Date().toISOString()
-    }
+  cameraEvents = await videoApiGet("CameraEvent", {
+    fromDate: videoEventFromDate.toISOString(),
+    toDate: new Date().toISOString(),
+    page: 0,
+    size: 100,
+    sort: "BY_TIMESTAMP_DESC"
   });
 
   console.table(cameraEvents);
 } catch (error) {
-  console.warn("CameraEvent情報を取得できませんでした。", error);
+  console.warn("Video APIからCameraEventを取得できませんでした。", error);
 }
-      const filteredDevices = (devices || []).filter((device, index, array) => {
+     const filteredDevices = (devices || []).filter((device, index, array) => {
   // アセット画面に存在しないことを確認したDeviceを除外
   if (device.name === "D71-1903") {
     return false;
