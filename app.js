@@ -174,7 +174,7 @@ async function videoApiGet(typeName, search = {}) {
             userName: session.userName,
             sessionId: session.sessionId
           },
-          search
+          ...search
         }
       })
     }
