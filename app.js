@@ -1323,7 +1323,7 @@ try {
 
   const videoEventToDate = new Date();
   const pageSize = 100;
-  const MAX_VIDEO_EVENT_PAGES = 10;
+  const MAX_VIDEO_EVENT_PAGES = 3;
   let page = 0;
   let currentPage = [];
 
