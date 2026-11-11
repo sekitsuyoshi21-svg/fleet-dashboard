@@ -176,12 +176,9 @@ async function videoApiGet(typeName, search = {}) {
   },
   ...search
 }
-}
-        }
-      })
-    }
-  );
-
+})
+});
+    
   if (!response.ok) {
     throw new Error(`Video API HTTPエラー: ${response.status}`);
   }
