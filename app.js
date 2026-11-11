@@ -1332,8 +1332,7 @@ try {
       fromDate: videoEventFromDate.toISOString(),
       toDate: videoEventToDate.toISOString(),
       page,
-      size: pageSize,
-      sort: "BY_TIMESTAMP_DESC"
+      size: pageSize
     });
 
     cameraEvents.push(...currentPage);
