@@ -1266,7 +1266,20 @@ console.table(
     licensePlate: device.licensePlate
   }))
 ); 
-      
+      const unusualDevices = (devices || []).filter((device) =>
+  !device.serialNumber ||
+  device.serialNumber === "000-000-0000" ||
+  !String(device.serialNumber).startsWith("G")
+);
+
+console.table(
+  unusualDevices.map((device) => ({
+    id: device.id,
+    name: device.name,
+    serialNumber: device.serialNumber,
+    licensePlate: device.licensePlate
+  }))
+);
       const deviceIds = (devices || []).map((device) => device.id).filter(Boolean);
 
       if (deviceIds.length === 0) {
