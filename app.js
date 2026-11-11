@@ -1346,12 +1346,12 @@ try {
   console.log(
     `過去7日間のCameraEventを${cameraEvents.length}件取得しました`
   );
-} catch (error) {
+　} catch (error) {
   console.warn(
     "Video APIからCameraEventを取得できませんでした。",
     error
-  );
-} 
+  　);
+　} 
   
   const filteredDevices = (devices || []).filter((device, index, array) => {
   // アセット画面に存在しないことを確認したDeviceを除外
