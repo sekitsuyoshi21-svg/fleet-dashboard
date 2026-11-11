@@ -1324,31 +1324,17 @@ try {
   );
 
   const videoEventToDate = new Date();
-  const pageSize = 100;
-  const MAX_VIDEO_EVENT_PAGES = 3;
-  let page = 0;
-  let currentPage = [];
+  const currentPage = await videoApiGet("CameraEvent", {
+  fromDate: videoEventFromDate.toISOString(),
+  toDate: videoEventToDate.toISOString(),
+  page: 0,
+  size: 100
+});
 
-  do {
-    currentPage = await videoApiGet("CameraEvent", {
-      fromDate: videoEventFromDate.toISOString(),
-      toDate: videoEventToDate.toISOString(),
-      page,
-      size: pageSize
-    });
+cameraEvents.push(...currentPage);
 
-    cameraEvents.push(...currentPage);
-
-    console.log(
-  `CameraEvent page ${page}: ${currentPage.length}件`,
-  currentPage[0]?.id,
-  currentPage[currentPage.length - 1]?.id
-);
-    
-    page += 1;
-  } while (
-  currentPage.length === pageSize &&
-  page < MAX_VIDEO_EVENT_PAGES
+console.log(
+  `CameraEventを${cameraEvents.length}件取得しました`
 );
 
   console.log(
