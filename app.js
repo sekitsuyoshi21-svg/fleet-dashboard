@@ -1337,6 +1337,13 @@ try {
     });
 
     cameraEvents.push(...currentPage);
+
+    console.log(
+  `CameraEvent page ${page}: ${currentPage.length}件`,
+  currentPage[0]?.id,
+  currentPage[currentPage.length - 1]?.id
+);
+    
     page += 1;
   } while (
   currentPage.length === pageSize &&
