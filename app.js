@@ -1323,6 +1323,7 @@ try {
 
   const videoEventToDate = new Date();
   const pageSize = 100;
+  const MAX_VIDEO_EVENT_PAGES = 10;
   let page = 0;
   let currentPage = [];
 
@@ -1337,7 +1338,10 @@ try {
 
     cameraEvents.push(...currentPage);
     page += 1;
-  } while (currentPage.length === pageSize);
+  } while (
+  currentPage.length === pageSize &&
+  page < MAX_VIDEO_EVENT_PAGES
+);
 
   console.log(
     `過去7日間のCameraEventを${cameraEvents.length}件取得しました`
