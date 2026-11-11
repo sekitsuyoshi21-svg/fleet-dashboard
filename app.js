@@ -1353,10 +1353,7 @@ try {
   );
 } 
   
-} catch (error) {
-  console.warn("Video APIからCameraEventを取得できませんでした。", error);
-}
-     const filteredDevices = (devices || []).filter((device, index, array) => {
+  const filteredDevices = (devices || []).filter((device, index, array) => {
   // アセット画面に存在しないことを確認したDeviceを除外
   if (device.name === "D71-1903") {
     return false;
