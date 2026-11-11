@@ -1330,6 +1330,11 @@ try {
   });
 
   console.table(cameraEvents);
+
+　if (cameraEvents.length > 0) {
+  console.log("CameraEventのサンプル:", cameraEvents[0]);
+}
+  
 } catch (error) {
   console.warn("Video APIからCameraEventを取得できませんでした。", error);
 }
