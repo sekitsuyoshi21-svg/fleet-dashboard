@@ -1328,8 +1328,10 @@ try {
 
   const videoEventToDate = new Date();
   const currentPage = await videoApiGet("CameraEvent", {
-  fromDate: videoEventFromDate.toISOString(),
-  toDate: videoEventToDate.toISOString(),
+  cameraEventSearch: {
+    fromDate: videoEventFromDate.toISOString(),
+    toDate: videoEventToDate.toISOString()
+  },
   page: 0,
   size: 100
 });
