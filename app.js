@@ -808,7 +808,9 @@ operation: operationLabel(statusInfo),
   　　　activeFilter === "all"
     　　　? true
     　　　: activeFilter === "pending"
-      　　　? vehicle.actionStatus === "未対応" && vehicle.level !== "normal"
+      　　　? vehicle.actionStatus === "未対応" &&
+  vehicle.level !== "normal" &&
+  getDiagnosticCodeValue(vehicle.rawFault) !== "292"
      　　　 : vehicle.level === activeFilter;
       
       const text = `${vehicle.id} ${vehicle.name} ${vehicle.driver} ${vehicle.title} ${vehicle.code}`.toLowerCase();
@@ -830,7 +832,8 @@ operation: operationLabel(statusInfo),
           <span class="status-pill status-pill--${escapeHtml(vehicle.level)}">
             <span class="dot dot--${levelDot[vehicle.level]}"></span>${escapeHtml(vehicle.status)}
           </span>
-          ${vehicle.level !== "normal" ? `
+          ${vehicle.level !== "normal" &&
+  getDiagnosticCodeValue(vehicle.rawFault) !== "292" ? `
   <span class="action-status action-status--${vehicle.actionStatus === "対応済み" ? "done" : vehicle.actionStatus === "対応中" ? "progress" : "pending"}">
     ${vehicle.actionStatus === "対応済み" ? "✓ " : vehicle.actionStatus === "対応中" ? "● " : "○ "}
     ${escapeHtml(vehicle.actionStatus)}
