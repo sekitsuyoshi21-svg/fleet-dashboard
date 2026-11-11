@@ -1249,6 +1249,23 @@ function openVehicleOnMap(deviceId) {
     vehicleIdentificationNumber: device.vehicleIdentificationNumber
   }))
 );
+
+     const duplicateDevices = (devices || []).filter((device, index, array) =>
+  array.some(
+    (item, otherIndex) =>
+      otherIndex !== index &&
+      item.name === device.name
+  )
+);
+
+console.table(
+  duplicateDevices.map((device) => ({
+    id: device.id,
+    name: device.name,
+    serialNumber: device.serialNumber,
+    licensePlate: device.licensePlate
+  }))
+); 
       
       const deviceIds = (devices || []).map((device) => device.id).filter(Boolean);
 
