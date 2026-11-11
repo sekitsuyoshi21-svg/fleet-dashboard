@@ -1332,7 +1332,7 @@ try {
   console.table(cameraEvents);
 
 　if (cameraEvents.length > 0) {
-  console.log("CameraEventのサンプル:", cameraEvents[0]);
+  console.warn("CameraEventのサンプル:", cameraEvents[0]);
 }
   
 } catch (error) {
