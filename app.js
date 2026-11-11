@@ -1240,46 +1240,6 @@ function openVehicleOnMap(deviceId) {
         search: {}
       });
       
-      console.table(
-  (devices || []).map((device) => ({
-    id: device.id,
-    name: device.name,
-    serialNumber: device.serialNumber,
-    licensePlate: device.licensePlate,
-    vehicleIdentificationNumber: device.vehicleIdentificationNumber
-  }))
-);
-
-     const duplicateDevices = (devices || []).filter((device, index, array) =>
-  array.some(
-    (item, otherIndex) =>
-      otherIndex !== index &&
-      item.name === device.name
-  )
-);
-
-console.table(
-  duplicateDevices.map((device) => ({
-    id: device.id,
-    name: device.name,
-    serialNumber: device.serialNumber,
-    licensePlate: device.licensePlate
-  }))
-); 
-      const unusualDevices = (devices || []).filter((device) =>
-  !device.serialNumber ||
-  device.serialNumber === "000-000-0000" ||
-  !String(device.serialNumber).startsWith("G")
-);
-
-console.table(
-  unusualDevices.map((device) => ({
-    id: device.id,
-    name: device.name,
-    serialNumber: device.serialNumber,
-    licensePlate: device.licensePlate
-  }))
-);
       const filteredDevices = (devices || []).filter((device, index, array) => {
   // アセット画面に存在しないことを確認したDeviceを除外
   if (device.name === "D71-1903") {
