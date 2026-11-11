@@ -1251,6 +1251,25 @@ try {
 } catch (error) {
   console.warn("Camera情報を取得できませんでした。", error);
 }
+      let cameraEvents = [];
+
+try {
+  const videoEventFromDate = new Date(
+    Date.now() - 7 * 24 * 60 * 60 * 1000
+  );
+
+  cameraEvents = await geotabCall("Get", {
+    typeName: "CameraEvent",
+    search: {
+      fromDate: videoEventFromDate.toISOString(),
+      toDate: new Date().toISOString()
+    }
+  });
+
+  console.table(cameraEvents);
+} catch (error) {
+  console.warn("CameraEvent情報を取得できませんでした。", error);
+}
       const filteredDevices = (devices || []).filter((device, index, array) => {
   // アセット画面に存在しないことを確認したDeviceを除外
   if (device.name === "D71-1903") {
