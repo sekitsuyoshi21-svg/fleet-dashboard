@@ -1282,6 +1282,8 @@ function openVehicleOnMap(deviceId) {
   }
 
   async function refreshData() {
+    console.warn("refreshData START");
+    
     if (els.refresh) {
       els.refresh.disabled = true;
       els.refresh.classList.add("is-spinning");
@@ -1398,6 +1400,8 @@ console.log(
       render();
       showToast(error?.message || "MyGeotabのデータを取得できませんでした");
     } finally {
+      console.warn("refreshData FINALLY");
+      
       if (els.refresh) {
         els.refresh.disabled = false;
         els.refresh.classList.remove("is-spinning");
