@@ -1239,7 +1239,17 @@ function openVehicleOnMap(deviceId) {
         typeName: "Device",
         search: {}
       });
-
+      
+      console.table(
+  (devices || []).map((device) => ({
+    id: device.id,
+    name: device.name,
+    serialNumber: device.serialNumber,
+    licensePlate: device.licensePlate,
+    vehicleIdentificationNumber: device.vehicleIdentificationNumber
+  }))
+);
+      
       const deviceIds = (devices || []).map((device) => device.id).filter(Boolean);
 
       if (deviceIds.length === 0) {
