@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>運行管理ダッシュボード</title>
-  <link rel="stylesheet" href="style.css?v=1.2.0">
+  <link rel="stylesheet" href="style.css?v=1.2.1">
 </head>
 <body>
   <div class="app-shell">
@@ -19,10 +19,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <label class="group-select" title="選んだグループ（企業）の車両だけを表示します">
-          <span>グループ（企業）</span>
-          <select id="groupSelect"><option value="">すべてのグループ</option></select>
-        </label>
         <div class="updated-at" aria-live="polite">
           <span class="status-dot status-dot--online"></span>
           <span>最終更新 <strong id="updatedAt">--:--</strong></span>
@@ -59,7 +55,18 @@
           <div><p class="eyebrow eyebrow--red">PRIORITY</p><h2>対応してください</h2></div>
           <button class="text-button" id="showCriticalButton" type="button">すべての要対応車両を見る <span>→</span></button>
         </div>
-        <div class="priority-grid" id="priorityGrid"></div>
+        <!-- 左：対応してください／右：表示する範囲（グループ（企業）の選択） -->
+        <div class="priority-row">
+          <div class="priority-grid" id="priorityGrid"></div>
+          <aside class="group-card">
+            <p class="eyebrow">表示する範囲</p>
+            <label class="group-select" title="選んだグループ（企業）の車両だけを表示します">
+              <span>グループ（企業）</span>
+              <select id="groupSelect"><option value="">すべてのグループ</option></select>
+            </label>
+            <small>選んだグループ（企業）の車両だけで、件数・一覧を表示します</small>
+          </aside>
+        </div>
       </section>
 
       <section class="fleet-panel">
@@ -102,6 +109,6 @@
   </aside>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=1.2.0"></script>
+  <script src="app.js?v=1.2.1"></script>
 </body>
 </html>
