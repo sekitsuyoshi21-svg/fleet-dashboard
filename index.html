@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>運行管理ダッシュボード</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.1.0">
 </head>
 <body>
   <div class="app-shell">
@@ -19,6 +19,10 @@
         </div>
       </div>
       <div class="header-actions">
+        <label class="group-select" title="選んだグループ（企業）の車両だけを表示します">
+          <span>グループ（企業）</span>
+          <select id="groupSelect"><option value="">すべてのグループ</option></select>
+        </label>
         <div class="updated-at" aria-live="polite">
           <span class="status-dot status-dot--online"></span>
           <span>最終更新 <strong id="updatedAt">--:--</strong></span>
@@ -34,7 +38,7 @@
       <section class="metrics" aria-label="今日の状況">
         <article class="metric-card">
           <div class="metric-icon metric-icon--blue" aria-hidden="true">▰</div>
-          <div><p>稼働車両</p><div class="metric-value"><strong id="activeCount">32</strong><span> / 36台</span></div><small>現在稼働中</small></div>
+          <div><p>稼働車両</p><div class="metric-value"><strong id="activeCount">--</strong><span> / <span id="totalCount">--</span>台</span></div><small>現在稼働中</small></div>
         </article>
         <article class="metric-card metric-card--critical">
           <div class="metric-icon metric-icon--red" aria-hidden="true">!</div>
@@ -98,6 +102,6 @@
   </aside>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=1.1.0"></script>
 </body>
 </html>

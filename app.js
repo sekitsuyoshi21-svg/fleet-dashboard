@@ -2,8 +2,18 @@
   "use strict";
 
   let api = null;
-  let vehicles = [];
+  let vehicles = [];        // 画面に表示する車両（選んだグループの車両だけ）
+  let allVehicles = [];     // 読み込んだすべての車両
   let activeFilter = "all";
+
+  // ---------- グループ（企業）の選択 ----------
+  // MyGeotabのグループ。上位のグループを選ぶと、その下のグループの車両も含める。
+  // 「GroupCompanyId」などGeotab標準の仕組み用グループは選択肢に出さない。
+  const GROUP_STORAGE_KEY = "fleetGroup";
+  let groupOptions = [];            // [{ id, name, depth, count }]
+  let deviceGroups = new Map();     // deviceId → Set(所属グループと、その上位グループのID)
+  let selectedGroup = "";
+  try { selectedGroup = localStorage.getItem(GROUP_STORAGE_KEY) || ""; } catch (error) { /* 保存できない環境 */ }
 
   const FAULT_LOOKBACK_HOURS = 24;
   const $ = (id) => document.getElementById(id);
@@ -837,6 +847,72 @@ operation: operationLabel(statusInfo),
     renderCounts();
   }
 
+  // グループの一覧と、車両ごとの所属グループ（上位グループも含む）を作る
+  function buildGroups(groupList, devices) {
+    const byId = new Map();
+    const parent = new Map();
+    (groupList || []).forEach((group) => {
+      byId.set(group.id, {
+        id: group.id,
+        name: group.name || group.id,
+        children: (group.children || []).map(referenceId).filter(Boolean)
+      });
+    });
+    byId.forEach((group) => group.children.forEach((childId) => parent.set(childId, group.id)));
+
+    deviceGroups = new Map();
+    const count = new Map();
+    (devices || []).forEach((device) => {
+      const set = new Set();
+      (device.groups || []).map(referenceId).forEach((groupId) => {
+        for (let id = groupId, guard = 0; id && guard < 30; id = parent.get(id), guard++) set.add(id);
+      });
+      deviceGroups.set(device.id, set);
+      set.forEach((id) => count.set(id, (count.get(id) || 0) + 1));
+    });
+
+    const isBuiltin = (id) => /^Group\w*Id$/.test(id);
+    groupOptions = [];
+    const walk = (id, depth) => {
+      const group = byId.get(id);
+      if (!group) return;
+      const show = !isBuiltin(id) && count.get(id) > 0;
+      if (show) groupOptions.push({ id, name: group.name, depth, count: count.get(id) });
+      group.children
+        .map((childId) => byId.get(childId))
+        .filter(Boolean)
+        .sort((a, b) => String(a.name).localeCompare(String(b.name), "ja"))
+        .forEach((child) => walk(child.id, show ? depth + 1 : depth));
+    };
+    [...byId.values()].filter((group) => !parent.has(group.id)).forEach((group) => walk(group.id, 0));
+  }
+
+  function inSelectedGroup(deviceId) {
+    return !selectedGroup || Boolean(deviceGroups.get(deviceId)?.has(selectedGroup));
+  }
+
+  function applyGroupFilter() {
+    // 選んでいたグループがなくなっていたら「すべて」に戻す
+    if (selectedGroup && !groupOptions.some((group) => group.id === selectedGroup)) selectedGroup = "";
+    vehicles = allVehicles.filter((vehicle) => inSelectedGroup(vehicle.deviceId));
+  }
+
+  function renderGroupSelect() {
+    const select = $("groupSelect");
+    if (!select) return;
+    select.innerHTML = `<option value="">すべてのグループ（${allVehicles.length}台）</option>` +
+      groupOptions.map((group) =>
+        `<option value="${escapeHtml(group.id)}">${"　".repeat(group.depth)}${escapeHtml(group.name)}（${group.count}台）</option>`
+      ).join("");
+    select.value = selectedGroup;
+    select.disabled = groupOptions.length === 0;
+    select.closest(".group-select")?.classList.toggle("is-active", Boolean(selectedGroup));
+  }
+
+  function selectedGroupName() {
+    return groupOptions.find((group) => group.id === selectedGroup)?.name || "";
+  }
+
   function renderPriority() {
     if (!els.priorityGrid) return;
     const critical = vehicles.filter((vehicle) => vehicle.level === "critical").slice(0, 2);
@@ -969,6 +1045,7 @@ ${vehicle.faultCount > 0
     setText("criticalCount", counts.critical);
     setText("warningCount", counts.warning);
     setText("activeCount", vehicles.filter((vehicle) => vehicle.isCommunicating !== false).length);
+    setText("totalCount", vehicles.length);
   }
 　async function getApproximateLocation(latitude, longitude, isMoving = false) {
   if (latitude === null || longitude === null) {
@@ -1328,10 +1405,8 @@ try {
 
   const videoEventToDate = new Date();
   const currentPage = await videoApiGet("CameraEvent", {
-  cameraEventSearch: {
-    fromDate: videoEventFromDate.toISOString(),
-    toDate: videoEventToDate.toISOString()
-  },
+  fromDate: videoEventFromDate.toISOString(),
+  toDate: videoEventToDate.toISOString(),
   page: 0,
   size: 100
 });
@@ -1373,13 +1448,14 @@ console.log(
 
       if (deviceIds.length === 0) {
         vehicles = [];
+        allVehicles = [];
         render();
         if (els.updatedAt) els.updatedAt.textContent = formatTime(now);
         showToast("アクセス可能な車両がありません");
         return;
       }
 
-      const [statusInfos, rawFaultData] = await Promise.all([
+      const [statusInfos, rawFaultData, groupList] = await Promise.all([
         geotabCall("Get", {
           typeName: "DeviceStatusInfo",
           search: {}
@@ -1391,18 +1467,29 @@ console.log(
             fromDate: faultFromDate.toISOString(),
             toDate: now.toISOString()
           }
+        }),
+        // グループ（企業）の一覧。取得できなくても、ほかの表示は続ける
+        geotabCall("Get", { typeName: "Group" }).catch((error) => {
+          console.warn("グループを取得できませんでした。", error);
+          return [];
         })
       ]);
 
       const faultData = await enrichFaultDetails(rawFaultData);
-      vehicles = buildVehicles(filteredDevices, statusInfos, faultData);
+      allVehicles = buildVehicles(filteredDevices, statusInfos, faultData);
+      buildGroups(groupList, filteredDevices);
+      applyGroupFilter();
+      renderGroupSelect();
 
       render();
       if (els.updatedAt) els.updatedAt.textContent = formatTime(now);
-      showToast(`MyGeotabから${vehicles.length}台の車両を取得しました`);
+      showToast(selectedGroup
+        ? `${selectedGroupName()}の車両${vehicles.length}台を表示しています（全${allVehicles.length}台）`
+        : `MyGeotabから${vehicles.length}台の車両を取得しました`);
     } catch (error) {
       console.error("MyGeotab data loading failed:", error);
       vehicles = [];
+      allVehicles = [];
       render();
       showToast(error?.message || "MyGeotabのデータを取得できませんでした");
     } finally {
@@ -1422,6 +1509,18 @@ console.log(
     });
 
     els.search?.addEventListener("input", renderTable);
+
+    // グループ（企業）を変えたら、読み込み直さずに表示だけ切り替える
+    $("groupSelect")?.addEventListener("change", (event) => {
+      selectedGroup = event.target.value || "";
+      try { localStorage.setItem(GROUP_STORAGE_KEY, selectedGroup); } catch (error) { /* 保存できない環境 */ }
+      applyGroupFilter();
+      renderGroupSelect();
+      render();
+      showToast(selectedGroup
+        ? `${selectedGroupName()}の車両${vehicles.length}台を表示しています`
+        : `すべての車両${vehicles.length}台を表示しています`);
+    });
 
     document.querySelectorAll(".filter-chip").forEach((button) => {
       button.addEventListener("click", () => {
