@@ -26,3 +26,22 @@ button,input{font:inherit}.app-shell{max-width:1480px;margin:auto;padding:26px 3
 .group-select select:focus{outline:2px solid rgba(31,111,235,.35);outline-offset:1px}
 .group-select.is-active select{border-color:var(--blue);background:#eef4ff;color:var(--blue-dark)}
 @media(max-width:650px){.group-select{width:100%}.group-select select{flex:1;min-width:0;max-width:none}}
+/* 故障の説明と対応の目安・走行距離（v1.2.0） */
+.vehicle-meter{font-size:12px;color:#475467;margin-top:2px}
+.advice-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
+.advice-badge{display:inline-flex;align-items:center;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.advice-badge--now{background:var(--red);color:#fff}
+.advice-badge--soon{background:var(--amber-soft);color:var(--amber);border-color:#f5c26b}
+.advice-badge--watch{background:#eef4ff;color:var(--blue-dark);border-color:#c7d7fe}
+.advice-history{font-size:12px;color:#475467}
+.advice-history.is-long{color:var(--red);font-weight:700}
+.advice-box{border-radius:12px;padding:14px 16px;margin:14px 0;border:1px solid var(--line);background:var(--surface-soft)}
+.advice-box--now{background:var(--red-soft);border-color:#fda29b}
+.advice-box--soon{background:var(--amber-soft);border-color:#f5c26b}
+.advice-box--watch{background:#f5f8ff;border-color:#c7d7fe}
+.advice-box-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.advice-box-head h3{margin:0;font-size:15px}
+.advice-explain{margin:0 0 6px;font-size:14px;line-height:1.6;color:var(--text)}
+.advice-action{margin:0 0 6px;font-size:14px;line-height:1.6;color:var(--text)}
+.advice-history-detail{margin:0 0 6px;font-size:13px;color:#475467}
+.advice-note{margin:0;font-size:12px;color:#667085}

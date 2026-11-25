@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>運行管理ダッシュボード</title>
-  <link rel="stylesheet" href="style.css?v=1.1.0">
+  <link rel="stylesheet" href="style.css?v=1.2.0">
 </head>
 <body>
   <div class="app-shell">
@@ -50,7 +50,7 @@
         </article>
         <article class="metric-card">
           <div class="metric-icon metric-icon--violet" aria-hidden="true">✓</div>
-          <div><p>点検期限間近</p><div class="metric-value"><strong id="inspectionCount">5</strong><span> 台</span></div><small>7日以内</small></div>
+          <div><p>故障が続いている</p><div class="metric-value"><strong id="inspectionCount">--</strong><span> 台</span></div><small>3日以上連続（様子見の故障を除く）</small></div>
         </article>
       </section>
 
@@ -102,6 +102,6 @@
   </aside>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=1.1.0"></script>
+  <script src="app.js?v=1.2.0"></script>
 </body>
 </html>
