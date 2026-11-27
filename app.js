@@ -207,12 +207,26 @@ async function videoApiGet(typeName, search = {}) {
 
   return result.result || [];
 }
+  // 運転手の名前：DeviceStatusInfo には運転手の番号（ID）しか入っていないため、
+  // ユーザー一覧（isDriver）から作った「番号 → 名前」の表で置き換える（v1.2.4）
+  // 名前の並びは「名（First name）の欄 → 姓（Last name）の欄」。j21では「名」の欄に苗字が入っている
+  let driverNames = new Map();
+  function buildDriverNames(users) {
+    driverNames = new Map();
+    (users || []).forEach((user) => {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+      driverNames.set(user.id, fullName || user.name || "");
+    });
+  }
+
   function getDriverName(driver) {
-    if (!driver) return "未割当";
-    if (driver.name) return driver.name;
+    const id = referenceId(driver);
+    if (!driver || !id || id === "UnknownDriverId" || id === "NoDriverId") return "未割当";
+    if (driverNames.get(id)) return driverNames.get(id);
     const fullName = [driver.firstName, driver.lastName].filter(Boolean).join(" ");
     if (fullName) return fullName;
-    return referenceId(driver) ? "割当あり" : "未割当";
+    if (driver.name) return driver.name;
+    return "割当あり（名前不明）";
   }
 
   function sourceText(diagnostic) {
@@ -1721,7 +1735,7 @@ console.log(
         return;
       }
 
-      const [statusInfos, rawFaultData, groupList, meters] = await Promise.all([
+      const [statusInfos, rawFaultData, groupList, meters, driverUsers] = await Promise.all([
         geotabCall("Get", {
           typeName: "DeviceStatusInfo",
           search: {}
@@ -1743,8 +1757,14 @@ console.log(
         loadMeters(deviceIds).catch((error) => {
           console.warn("走行距離・稼働時間を取得できませんでした。", error);
           return new Map();
+        }),
+        // 運転手の一覧（名前の表示用）。取得できなくても、ほかの表示は続ける
+        geotabCall("Get", { typeName: "User", search: { isDriver: true } }).catch((error) => {
+          console.warn("運転手の一覧を取得できませんでした。", error);
+          return [];
         })
       ]);
+      buildDriverNames(driverUsers);
 
       const allFaults = await enrichFaultDetails(rawFaultData);
       const faultHistory = buildFaultHistory(allFaults);
