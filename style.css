@@ -55,3 +55,6 @@ button,input{font:inherit}.app-shell{max-width:1480px;margin:auto;padding:26px 3
 .group-card small{color:#475467;font-size:12px;line-height:1.5}
 @media(max-width:900px){.priority-row{grid-template-columns:1fr}}
 .priority-row .priority-grid > .priority-card:only-child{grid-column:1 / -1}
+
+/* 「未対応」の札を赤い文字に（v1.2.3） */
+.action-status--pending{background:var(--red-soft);color:var(--red);border:1px solid #fecdca}
